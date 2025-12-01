@@ -4,44 +4,29 @@ warnings.filterwarnings("ignore")
 import streamlit as st
 import numpy as np
 import joblib
+import math
 import matplotlib.pyplot as plt
 import base64
-import pandas as pd
-import os
-import plotly.graph_objects as go
-import plotly.subplots as sp
-import json
 
-# Main goal: load ML assets + dataset, fix repo paths, embed analytics HTML
+# Model core
+model = joblib.load("rf_diabetes_model.pkl")
+scaler = joblib.load("scaler.pkl")
 
-# --- PATH FIX (repo-relative) ---
-BASE_DIR = os.path.dirname(__file__)
-DATA_PATH = os.path.join(BASE_DIR, "diabetes_prediction_dataset.csv")
-
-# Load dataset
-df = pd.read_csv(DATA_PATH)
-df.columns = df.columns.str.strip()
-
-# ML assets
-model = joblib.load(os.path.join(BASE_DIR, "rf_diabetes_model.pkl"))
-scaler = joblib.load(os.path.join(BASE_DIR, "scaler.pkl"))
-
-# Background loader
-def load_bg(path):
-  with open(path, "rb") as f:
-    return base64.b64encode(f.read()).decode()
-
-BG_PATH = os.path.join(BASE_DIR, "main", "Welcome to BloodBeaconPH.png")
-bg_base64 = load_bg(BG_PATH)
-
-# Page config
+# Page configuration
 st.set_page_config(
   page_title="BloodBeaconPH",
   layout="centered",
   initial_sidebar_state="collapsed",
 )
 
-# Apply background
+# Background
+def load_bg(path):
+  with open(path, "rb") as f:
+    return base64.b64encode(f.read()).decode()
+
+BG_PATH = r"main/Welcome to BloodBeaconPH.png"
+bg_base64 = load_bg(BG_PATH)
+
 st.markdown(
   f"""
   <style>
@@ -58,135 +43,123 @@ st.markdown(
       padding: 2rem;
       backdrop-filter: blur(6px);
     }}
+    .risk-btn-wrap {{
+      display:flex;
+      justify-content:center;
+      margin:1.2rem 0;
+    }}
   </style>
   """,
   unsafe_allow_html=True,
 )
 
-# Risk scoring
+# Risk heuristic
 def risk_likelihood(a, g, h, b):
-  score = 0
-  score += 1.5 if (a > 45) else 0
-  score += 2 if (a > 60) else 0
-  score += 2.5 if (g > 140) else 0
-  score += 3 if (g > 200) else 0
-  score += 2 if (h > 5.7) else 0
-  score += 3 if (h > 6.5) else 0
-  score += 1.5 if (b > 27) else 0
-  score += 2.5 if (b > 30) else 0
-  return min(score / 12, 1.0)
+  s = 0
+  s += 1.5 if (a > 45) else 0
+  s += 2 if (a > 60) else 0
+  s += 2.5 if (g > 140) else 0
+  s += 3 if (g > 200) else 0
+  s += 2 if (h > 5.7) else 0
+  s += 3 if (h > 6.5) else 0
+  s += 1.5 if (b > 27) else 0
+  s += 2.5 if (b > 30) else 0
+  return min(s / 12, 1.0)
 
-# Sidebar console
-with st.sidebar:
-  st.subheader("🧬 System Physician Console")
-  st.write("**AI Core Physician — BloodBeacon**")
+# ---- Modal control ----
+if "show_modal" not in st.session_state:
+  st.session_state.show_modal = False
 
-# Header
-st.title("🩸 BloodBeaconPH Analytics")
-st.caption("Feature intelligence refreshed on every rerun.")
+def open_predictor():
+  st.session_state.show_modal = True
 
-# Glossary with Heart Disease added
-with st.expander("🧾 PH Medical Glossary"):
-  st.write("""
-**HbA1c** — measures average blood sugar in the last 2–3 months.  
-**Glucose mg/dL** — current blood sugar concentration.  
-**BMI** — body mass index based on height and weight.  
-**Hypertension** — high blood pressure, a diabetes risk factor.  
-**Heart Disease** — cardiovascular condition that increases diabetes risk.  
-  """)
+# ---- Landing UI ----
+st.title("🩸 BloodBeaconPH")
+st.write("Dr. Gary Glucose A.I active. PH biomarker systems operational.")
 
-# --- DASHBOARD BUILD (Plotly HTML export) ---
-RANGES = {
-  "age": (0.08, 80.0),
-  "bmi": (10.01, 95.69),
-  "HbA1c_level": (3.5, 9.0),
-  "blood_glucose_level": (80, 300),
-  "hypertension": (0, 1),
-  "heart_disease": (0, 1),
-  "diabetes": (0, 1),
-}
+st.markdown('<div class="risk-btn-wrap">', unsafe_allow_html=True)
+st.button("🧪 Predict Your Risk of Diabetes", on_click=open_predictor)
+st.markdown("</div>", unsafe_allow_html=True)
 
-df_stats = df.copy()
-
-dashboard = sp.make_subplots(
-  rows=4, cols=2,
-  specs=[
-    [{"type":"bar"}, {"type":"bar"}],
-    [{"type":"bar"}, {"type":"bar"}],
-    [{"type":"bar"}, {"type":"bar"}],
-    [{"type":"pie"}, None]
-  ],
-  subplot_titles=[
-    "Age","BMI",
-    "Current Blood Glucose","HbA1c Level",
-    "Hypertension","Heart Disease",
-    "Diabetes","Gender"
-  ]
+st.subheader("📊 Patient Demographics")
+chart_key = st.radio(
+  "",
+  list(demo_paths := {
+    "Age Distribution": "main/age_distribution.png",
+    "Blood Sugar": "main/blood_sugar_distribution.png",
+    "BMI Profile": "main/bmi_distribution.png",
+    "Gender": "main/gender_distribution.png",
+    "HbA1c": "main/hba1c_distribution.png",
+    "Heart Disease": "main/heart_disease_distribution.png",
+    "Hypertension": "main/hypertension_distribution.png",
+  }).keys(),
+  horizontal=True,
+  key="cohort_radio",
 )
+st.image(demo_paths[chart_key], use_column_width=True)
 
-def build_hist(feature, bins):
-  mn, mx = RANGES[feature]
-  hist, edges = np.histogram(df_stats[feature], bins=bins, range=(mn, mx))
-  labels = [f"{edges[i]:.2f} – {edges[i+1]:.2f}" for i in range(len(hist))]
-  return labels, hist.tolist()
+# ---- Render modal only after rerun ----
+if st.session_state.show_modal:
+  with st.modal("🔍 Diabetes Risk Scanner"):
 
-age_labels, age_vals = build_hist("age", 20)
-bmi_labels, bmi_vals = build_hist("bmi", 18)
-glucose_labels, glucose_vals = build_hist("blood_glucose_level", 15)
-hba1c_labels, hba1c_vals = build_hist("HbA1c_level", 15)
+    # Predictor console UI
+    st.subheader("Clinical Inputs")
+    gender = st.selectbox("Gender", ["Male","Female"])
+    age = st.number_input("Age (years)", 10, 120, 30)
+    hypertension = st.selectbox("Hypertension", [0,1])
+    heart_disease = st.selectbox("Heart Disease", [0,1])
+    hba1c = st.number_input("HbA1c (%)", 3.0, 15.0, 5.5)
+    glucose = st.number_input("Glucose (mg/dL)", 70, 400, 100)
 
-dashboard.add_trace(go.Bar(x=age_labels, y=age_vals, hovertemplate="Range: %{x}<br>Count: %{y}<extra></extra>"), row=1,col=1)
-dashboard.add_trace(go.Bar(x=bmi_labels, y=bmi_vals, hovertemplate="Range: %{x}<br>Count: %{y}<extra></extra>"), row=1,col=2)
-dashboard.add_trace(go.Bar(x=glucose_labels, y=glucose_vals, hovertemplate="Range: %{x}<br>Count: %{y}<extra></extra>"), row=2,col=1)
-dashboard.add_trace(go.Bar(x=hba1c_labels, y=hba1c_vals, hovertemplate="Range: %{x}<br>Count: %{y}<extra></extra>"), row=2,col=2)
+    # BMI section (no delay + instant rerun)
+    st.write("")
+    w = st.number_input("Weight (kg)", 1.0, 300.0, 70.0)
+    h = st.number_input("Height (cm)", 30.0, 250.0, 170.0)
+    if st.button("Calculate BMI"):
+      bmi_val = round(w / ((h/100) ** 2), 2)
+      st.session_state.bmi_calc_value = bmi_val
+      st.experimental_rerun()  # forces immediate reflection
 
-def build_flag(feature):
-  counts = df_stats[feature].value_counts().sort_index()
-  return counts.index.astype(str).tolist(), counts.values.tolist()
+    bmi = st.session_state.get("bmi_calc_value")
+    if bmi:
+      st.metric("BMI", bmi)
 
-htn_l, htn_v = build_flag("hypertension")
-hd_l, hd_v = build_flag("heart_disease")
-dm_l, dm_v = build_flag("diabetes")
+    # Glossary relocated here
+    with st.expander("🧾 Medical Glossary"):
+      st.write("""
+      HbA1c — avg glucose over 2–3 months  
+      BMI — height/weight indexed  
+      Hypertension — BP risk factor
+      """)
 
-dashboard.add_trace(go.Bar(x=htn_l, y=htn_v, hovertemplate="Value: %{x}<br>Count: %{y}<extra></extra>"), row=3,col=1)
-dashboard.add_trace(go.Bar(x=hd_l, y=hd_v, hovertemplate="Value: %{x}<br>Count: %{y}<extra></extra>"), row=3,col=2)
-dashboard.add_trace(go.Bar(x=dm_l, y=dm_v, hovertemplate="Value: %{x}<br>Count: %{y}<extra></extra>"), row=4,col=1)
+    # Run analysis
+    if (st.button("📡 Analyze Risk", disabled=(bmi is None))):
+      arr = np.array([[1 if gender=="Male" else 0, age, hypertension, heart_disease, bmi, hba1c, glucose]])
+      arr_s = scaler.transform(arr)
+      pred = model.predict(arr_s)[0]
+      r_val = risk_likelihood(age, glucose, hba1c, bmi)
 
-gender_counts = df_stats["gender"].value_counts()
-dashboard.add_trace(go.Pie(
-  labels=gender_counts.index.tolist(),
-  values=gender_counts.values.tolist(),
-  hole=0.35,
-  hovertemplate="Category: %{label}<br>Count: %{value}<br>Percent: %{percent}<extra></extra>"
-), row=4,col=1)
+      # Chart
+      st.subheader("Biomarker Contribution")
+      vals = [age/120*100, bmi/50*100, glucose/400*100, hba1c/15*100]
+      labs = ["Age","BMI","Glucose","HbA1c"]
+      f, a = plt.subplots()
+      a.bar(labs, vals)
+      for i, v in enumerate(vals):
+        a.text(i, v+2, f"{v:.1f}%", ha="center", weight="bold")
+      st.pyplot(f)
 
-dashboard.update_layout(height=900, showlegend=False, margin=dict(l=20,r=20,t=40,b=20))
+      # Live radar
+      st.progress(r_val)
+      st.caption(f"Threat Index: {r_val*100:.1f}%")
 
-# Write analytics HTML and JSON
-dashboard.write_html(os.path.join(BASE_DIR, "dashboard.html"))
+      if pred == 1:
+        st.error("🚨 High risk detected")
+      else:
+        st.success("✅ Risk nominal")
+        st.balloons()
 
-bundle = {
-  f: {"min":v[0], "max":v[1]} for f,v in RANGES.items()
-}
-bundle["charts"] = {
-  "age": age_vals,
-  "bmi": bmi_vals,
-  "blood_glucose": glucose_vals,
-  "HbA1c": hba1c_vals,
-  "hypertension": htn_v,
-  "heart_disease": hd_v,
-  "diabetes": dm_v,
-  "gender": {"labels": gender_counts.index.tolist(), "values": gender_counts.values.tolist()}
-}
-
-with open(os.path.join(BASE_DIR, "charts.json"), "w") as jf:
-  json.dump(bundle, jf, indent=2)
-
-# --- EMBED ANALYTICS PANEL UNDER APP ---
-with st.expander("📊 Live Analytics Panel", expanded=True):
-  html = open(os.path.join(BASE_DIR, "dashboard.html"), "r").read()
-  st.components.v1.html(html, height=920)
-
-# Footer
-st.write("---")
-st.caption("Dashboard rendered by BloodBeaconPH AI Core.")
+    # Close modal cleanly
+    if st.button("Close Scanner"):
+      st.session_state.show_modal = False
+      st.experimental_rerun()

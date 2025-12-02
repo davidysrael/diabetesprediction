@@ -50,6 +50,23 @@ st.markdown(
       border: 1px solid #ccc;
       font-size: 1rem;
     }}
+
+    /* 🔶 Highlight Beacon Scan Button (orange gradient) */
+    div.stButton > button#btn_predict {{
+      background: linear-gradient(90deg, orangered, darkorange);
+      color: white;
+      padding: 0.6rem 1.4rem;
+      border-radius: 10px;
+      border: none;
+      font-size: 16px;
+      font-weight: 600;
+      transition: 0.25s ease-in-out;
+    }}
+    div.stButton > button#btn_predict:hover {{
+      background: linear-gradient(90deg, darkorange, orangered);
+      transform: scale(1.03);
+      cursor: pointer;
+    }}
   </style>
   """,
   unsafe_allow_html=True,
@@ -82,7 +99,6 @@ with st.sidebar:
   Passionate about diagnostics and preventive healthcare.
   """)
 
-# ✅ HEADER RESTORED & UPDATED
 # Header
 st.title("🩸 BloodBeaconPH")
 st.write("Dr. Gary Glucose at your service. I am a Machine Learning powered system for predicting your risk of diabetes configured for PH Clinical trends.")
@@ -96,7 +112,18 @@ with st.expander("🧾 PH Medical Glossary"):
   Hypertension — high blood pressure, a diabetes risk factor.
   """)
 
-# BMI Calculator
+# 🔶 **GENDER & AGE FIRST (moved above BMI as requested)**
+st.subheader("🧍 Patient Profile")
+
+gender = st.selectbox("Gender", ["Male","Female"], key=("gender_select_main"))
+age = st.text_input("Age (years)", value=("30.00"))
+
+try:
+  age = round(float(age), 2)
+except:
+  age = 30.00
+
+# 🔶 **BMI CALCULATOR NOW HERE (AFTER gender + age)**
 st.subheader("📏 BMI Calculator")
 
 if ("bmi_calc_value" not in st.session_state):
@@ -122,21 +149,14 @@ if (st.button("Compute BMI", key=("btn_bmi"))):
 
 bmi = st.session_state.bmi_calc_value
 
-# Inputs
+# 🔬 Patient Biomarkers
 st.subheader("🧬 Patient Biomarkers")
 
-gender = st.selectbox("Gender", ["Male","Female"], key=("gender_select_main"))
-age = st.text_input("Age (years)", value=("30.00"))
 hba1c = st.text_input("HbA1c (%)", value=("5.50"))
 glucose = st.text_input("Blood Glucose (mg/dL)", value=("100.00"))
 
 hypertension = st.selectbox("Hypertension [0=none, 1=yes]", [0, 1], key=("input_htn_main"))
 heart_disease = st.selectbox("Heart Disease [0=none, 1=yes]", [0, 1], key=("input_hd_main"))
-
-try:
-  age = round(float(age), 2)
-except:
-  age = 30.00
 
 try:
   hba1c = round(float(hba1c), 2)
@@ -167,14 +187,13 @@ gender_encoded = 1 if (gender == "Male") else 0
 X = np.array([[gender_encoded, age, hypertension, heart_disease, bmi, hba1c, glucose]])
 console = st.empty()
 
-# ✅ BEACON SCAN RESTORED (didn't remove, only input type changed so no spinners ever exist)
+# 🔶 SCAN BUTTON — now highlighted + unchanged logic
 if (st.button("🔍 Initiate Beacon Scan", key=("btn_predict"), disabled=(not scan_ready))):
   st.subheader("📊 Biomarker Breakdown")
 
   values = [age/80 * 100, bmi/40 * 100, glucose/300 * 100, hba1c/9 * 100]
   labels = ["Age","BMI","Glucose","HbA1c"]
 
-  # Restore bar color logic
   def bar_color(v):
     if (v >= 90):
       return "red"
@@ -191,11 +210,9 @@ if (st.button("🔍 Initiate Beacon Scan", key=("btn_predict"), disabled=(not sc
   fig, ax = plt.subplots()
   ax.bar(labels, values)
 
-  # ✅ BAR FACE COLOR RESTORED
   for i, bar in enumerate(ax.patches):
     bar.set_facecolor(colors[i])
 
-  # ✅ TITLE, LABELS, & GRID RESTORED (you sent this snippet, now reapplied)
   ax.set_title("PH Clinical Biomarker Levels", fontsize=(14))
   ax.set_ylabel("Risk Contribution (%)", fontsize=(12))
   ax.set_ylim(0, 110)
@@ -215,7 +232,6 @@ if (st.button("🔍 Initiate Beacon Scan", key=("btn_predict"), disabled=(not sc
   console.write("Reading glucose and HbA1c matrix...")
   console.write("Firing predictive core...")
 
-  # ML inference
   X_scaled = scaler.transform(X)
   result = model.predict(X_scaled)[0]
 

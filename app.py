@@ -22,7 +22,7 @@ def load_bg(path):
 BG_PATH = r"main/Welcome to BloodBeaconPH.png"
 bg_base64 = load_bg(BG_PATH)
 
-# Inject background + force remove numeric spinner UI
+# Inject background + remove numeric spinner UI
 st.markdown(
   f"""
   <style>
@@ -72,6 +72,28 @@ st.markdown(
   unsafe_allow_html=True,
 )
 
+# 🔒 Add input restrictions (AGE = integers only, others = allow one decimal)
+st.markdown("""
+<script>
+document.addEventListener("input",(e)=>{
+  const t=e.target;
+  if(t.tagName==="INPUT" && t.type==="text"){
+
+      // AGE strictly integer-only
+      if(t.placeholder.includes("Age")){
+          t.value = t.value.replace(/[^0-9]/g,"");  // digits only
+          return;
+      }
+
+      // ALL OTHER INPUTS — allow digits + one decimal point
+      t.value = t.value
+        .replace(/[^0-9.]/g,"")       // remove non-numeric except dot
+        .replace(/\\.(?=.*\\.)/g,""); // keep only one dot
+  }
+});
+</script>
+""", unsafe_allow_html=True)
+
 # Load model + scaler
 model = joblib.load("rf_diabetes_model.pkl")
 scaler = joblib.load("scaler.pkl")
@@ -112,19 +134,18 @@ with st.expander("🧾 PH Medical Glossary"):
   Hypertension — high blood pressure, a diabetes risk factor.
   """)
 
-# 🔶 **GENDER & AGE FIRST (moved above BMI as requested)**
+# Patient Profile
 st.subheader("🧍 Patient Profile")
 
 gender = st.selectbox("Gender", ["Male","Female"], key=("gender_select_main"))
-age = st.text_input("Age (years)", value=("30.00"))
+age = st.text_input("Age (years)", value=("30"))
 
 try:
   age = int(float(age))
 except:
   age = 30
 
-
-# 🔶 **BMI CALCULATOR NOW HERE (AFTER gender + age)**
+# BMI Calculator
 st.subheader("📏 BMI Calculator")
 
 if ("bmi_calc_value" not in st.session_state):
@@ -150,7 +171,7 @@ if (st.button("Compute BMI", key=("btn_bmi"))):
 
 bmi = st.session_state.bmi_calc_value
 
-# 🔬 Patient Biomarkers
+# Patient Biomarkers
 st.subheader("🧬 Patient Biomarkers")
 
 hba1c = st.text_input("HbA1c (%)", value=("5.50"))
@@ -176,19 +197,19 @@ c2.metric("BMI", ("--" if (bmi is None) else f"{bmi:.2f}"))
 c3.metric("Glucose", f"{glucose:.2f}")
 c4.metric("HbA1c", f"{hba1c:.2f}")
 
-# Validation interlock
+# Validation
 scan_ready = False
 if (bmi is None):
   st.warning("🔐 Scan lock: BMI must be computed first.")
 else:
   scan_ready = True
 
-# Build ML input matrix
+# ML input matrix
 gender_encoded = 1 if (gender == "Male") else 0
 X = np.array([[gender_encoded, age, hypertension, heart_disease, bmi, hba1c, glucose]])
 console = st.empty()
 
-# 🔶 SCAN BUTTON — now highlighted + unchanged logic
+# Scan button
 if (st.button("🔍 Initiate Beacon Scan", key=("btn_predict"), disabled=(not scan_ready))):
   st.subheader("📊 Biomarker Breakdown")
 
@@ -196,14 +217,10 @@ if (st.button("🔍 Initiate Beacon Scan", key=("btn_predict"), disabled=(not sc
   labels = ["Age","BMI","Glucose","HbA1c"]
 
   def bar_color(v):
-    if (v >= 90):
-      return "red"
-    if (v >= 80):
-      return "orangered"
-    if (v >= 70):
-      return "darkorange"
-    if (v >= 60):
-      return "orange"
+    if (v >= 90): return "red"
+    if (v >= 80): return "orangered"
+    if (v >= 70): return "darkorange"
+    if (v >= 60): return "orange"
     return "gray"
 
   colors = list(map(bar_color, values))
@@ -246,4 +263,4 @@ if (st.button("🔍 Initiate Beacon Scan", key=("btn_predict"), disabled=(not sc
 
 # Footer
 st.write("---")
-st.caption("Diagnostics completed by Dr. Gary Glucose from BloodBeaconPH system core.")
+st.caption("Diagnostics by Dr. Gary Glucose from BloodBeaconPH system core.")

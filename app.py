@@ -21,7 +21,6 @@ def load_bg(path):
 BG_PATH = r"main/Welcome to BloodBeaconPH.png"
 bg_base64 = load_bg(BG_PATH)
 
-
 st.markdown(
   f"""
   <style>
@@ -71,7 +70,7 @@ st.markdown(
   unsafe_allow_html=True,
 )
 
-
+# JS ENFORCEMENT: AGE integer only, others allow 2 decimals
 st.markdown("""
 <script>
 document.addEventListener("input",(e)=>{
@@ -80,14 +79,14 @@ document.addEventListener("input",(e)=>{
 
       // AGE strictly integer-only
       if(t.placeholder.includes("Age")){
-          t.value = t.value.replace(/[^0-9]/g,"");  // digits only
+          t.value = t.value.replace(/[^0-9]/g,"");
           return;
       }
 
-      // ALL OTHER INPUTS — allow digits + one decimal point
+      // Others: allow digits + single decimal
       t.value = t.value
-        .replace(/[^0-9.]/g,"")       // remove non-numeric except dot
-        .replace(/\\.(?=.*\\.)/g,""); // keep only one dot
+        .replace(/[^0-9.]/g,"")
+        .replace(/\\.(?=.*\\.)/g,"");
   }
 });
 </script>
@@ -96,7 +95,6 @@ document.addEventListener("input",(e)=>{
 
 model = joblib.load("rf_diabetes_model.pkl")
 scaler = joblib.load("scaler.pkl")
-
 
 def risk_likelihood(a, g, h, b):
   score = 0
@@ -123,7 +121,6 @@ with st.sidebar:
 
 st.title("🩸 BloodBeaconPH")
 st.write("Dr. Gary Glucose at your service. I am a Machine Learning powered system for predicting your risk of diabetes configured for PH Clinical trends.")
-
 
 with st.expander("🧾 PH Medical Glossary"):
   st.write("""
@@ -170,7 +167,6 @@ if (st.button("Compute BMI", key=("btn_bmi"))):
 
 bmi = st.session_state.bmi_calc_value
 
-
 st.subheader("🧬 Patient Biomarkers")
 
 hba1c = st.text_input("HbA1c (%)", value=("5.50"))
@@ -189,20 +185,17 @@ try:
 except:
   glucose = 100.00
 
-
 c1, c2, c3, c4 = st.columns(4)
 c1.metric("Age", f"{age}")
 c2.metric("BMI", ("--" if (bmi is None) else f"{bmi:.2f}"))
 c3.metric("Glucose", f"{glucose:.2f}")
 c4.metric("HbA1c", f"{hba1c:.2f}")
 
-
 scan_ready = False
 if (bmi is None):
   st.warning("🔐 Scan lock: BMI must be computed first.")
 else:
   scan_ready = True
-
 
 gender_encoded = 1 if (gender == "Male") else 0
 X = np.array([[gender_encoded, age, hypertension, heart_disease, bmi, hba1c, glucose]])
@@ -213,7 +206,7 @@ if (st.button("🔍 Initiate Beacon Scan", key=("btn_predict"), disabled=(not sc
   st.subheader("📊 Biomarker Breakdown")
 
   # -------------------------------
-  # 🔬 PH-ADAPTED FINDRISC SCORING
+  # 🔬 PH-ADAPTED FINDRISC (SEX REMOVED)
   # -------------------------------
 
   # 1. AGE (0–6)
@@ -246,9 +239,6 @@ if (st.button("🔍 Initiate Beacon Scan", key=("btn_predict"), disabled=(not sc
   elif hba1c < 6.5: a1c_pts = 3
   else: a1c_pts = 6
 
-  # 7. SEX (0–1)
-  sex_pts = 1 if gender == "Male" else 0
-
   # FOR BAR CHART VISUALIZATION (percent per category)
   values = [
     (age_pts / 6) * 100,
@@ -256,8 +246,7 @@ if (st.button("🔍 Initiate Beacon Scan", key=("btn_predict"), disabled=(not sc
     (glu_pts / 6) * 100,
     (a1c_pts / 6) * 100,
     (htn_pts / 3) * 100,
-    (heart_pts / 3) * 100,
-    (sex_pts / 1) * 100,
+    (heart_pts / 3) * 100
   ]
 
   labels = [
@@ -266,11 +255,9 @@ if (st.button("🔍 Initiate Beacon Scan", key=("btn_predict"), disabled=(not sc
     "Glucose",
     "HbA1c",
     "Hypertension",
-    "Heart Dx",
-    "Sex"
+    "Heart D"
   ]
 
-  # COLOR BASED ON RANGE
   def bar_color(v):
     if (v >= 90): return "red"
     if (v >= 80): return "orangered"
@@ -300,10 +287,10 @@ if (st.button("🔍 Initiate Beacon Scan", key=("btn_predict"), disabled=(not sc
   st.pyplot(fig)
 
   # -------------------------------
-  # 📡 RADAR: FINDRISC → 0–29 scale
+  # 📡 LIVE RADAR — MAX = 28 (SEX REMOVED)
   # -------------------------------
-  total_findrisc = age_pts + bmi_pts + glu_pts + a1c_pts + htn_pts + heart_pts + sex_pts
-  r_live = total_findrisc / 29  # scale 0–1
+  total_findrisc = age_pts + bmi_pts + glu_pts + a1c_pts + htn_pts + heart_pts
+  r_live = total_findrisc / 28
 
   st.subheader("📡 Live Risk Radar (PH Clinical Index)")
   st.progress(r_live)
@@ -323,7 +310,6 @@ if (st.button("🔍 Initiate Beacon Scan", key=("btn_predict"), disabled=(not sc
     st.success("✅ No high diabetes risk detected.")
     st.balloons()
     console.write("All vitals optimal, sir.")
-
 
 st.write("---")
 st.caption("Diagnostics by Dr. Gary Glucose from BloodBeaconPH system core.")

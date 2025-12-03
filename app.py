@@ -49,7 +49,7 @@ st.markdown(
       font-size: 1rem;
     }}
 
-    /* 🔶 Highlight Beacon Scan Button (orange gradient) */
+    
     div.stButton > button#btn_predict {{
       background: linear-gradient(90deg, orangered, darkorange);
       color: white;
@@ -70,7 +70,7 @@ st.markdown(
   unsafe_allow_html=True,
 )
 
-# JS ENFORCEMENT: AGE integer only, others allow 2 decimals
+
 st.markdown("""
 <script>
 document.addEventListener("input",(e)=>{
@@ -203,19 +203,16 @@ console = st.empty()
 
 
 if (st.button("🔍 Initiate Beacon Scan", key=("btn_predict"), disabled=(not scan_ready))):
-  st.subheader("📊 Biomarker Breakdown")
+  st.subheader("📊 Biomarker Breakdown FINDRISC (Finnish Diabetes Risk Score)")
 
-  # -------------------------------
-  # 🔬 PH-ADAPTED FINDRISC (SEX REMOVED)
-  # -------------------------------
+ 
 
-  # 1. AGE (0–6)
   if age < 35: age_pts = 0
   elif age < 45: age_pts = 2
   elif age < 55: age_pts = 4
   else: age_pts = 6
 
-  # 2. BMI (0–4)
+
   if bmi is None:
     bmi_pts = 0
   elif bmi < 23: bmi_pts = 0
@@ -223,23 +220,23 @@ if (st.button("🔍 Initiate Beacon Scan", key=("btn_predict"), disabled=(not sc
   elif bmi < 30: bmi_pts = 2
   else: bmi_pts = 4
 
-  # 3. HYPERTENSION (0–3)
+  
   htn_pts = 3 if hypertension == 1 else 0
 
-  # 4. HEART DISEASE (0–3)
+  
   heart_pts = 3 if heart_disease == 1 else 0
 
-  # 5. GLUCOSE (0–6)
+  
   if glucose < 100: glu_pts = 0
   elif glucose < 126: glu_pts = 3
   else: glu_pts = 6
 
-  # 6. HBA1C (0–6)
+ 
   if hba1c < 5.7: a1c_pts = 0
   elif hba1c < 6.5: a1c_pts = 3
   else: a1c_pts = 6
 
-  # FOR BAR CHART VISUALIZATION (percent per category)
+  
   values = [
     (age_pts / 6) * 100,
     (bmi_pts / 4) * 100,
@@ -267,16 +264,14 @@ if (st.button("🔍 Initiate Beacon Scan", key=("btn_predict"), disabled=(not sc
 
   colors = list(map(bar_color, values))
 
-  # -------------------------------
-  # 📊 DRAW FINDRISC BAR CHART
-  # -------------------------------
+ 
   fig, ax = plt.subplots()
   ax.bar(labels, values)
 
   for i, bar in enumerate(ax.patches):
     bar.set_facecolor(colors[i])
 
-  ax.set_title("PH Clinical Biomarker Levels", fontsize=(14))
+  ax.set_title("PH Clinical Biomarker Levels - FINDRISC (Finnish Diabetes Risk Score)", fontsize=(14))
   ax.set_ylabel("Risk Contribution (%)", fontsize=(12))
   ax.set_ylim(0, 110)
   ax.grid(axis=("y"), alpha=0.2)
@@ -286,9 +281,7 @@ if (st.button("🔍 Initiate Beacon Scan", key=("btn_predict"), disabled=(not sc
 
   st.pyplot(fig)
 
-  # -------------------------------
-  # 📡 LIVE RADAR — MAX = 28 (SEX REMOVED)
-  # -------------------------------
+
   total_findrisc = age_pts + bmi_pts + glu_pts + a1c_pts + htn_pts + heart_pts
   r_live = total_findrisc / 28
 

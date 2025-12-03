@@ -252,7 +252,7 @@ if (st.button("🔍 Initiate Beacon Scan", key=("btn_predict"), disabled=(not sc
     "Glucose",
     "HbA1c",
     "Hypertension",
-    "Heart D"
+    "Heart Disease"
   ]
 
   def bar_color(v):
